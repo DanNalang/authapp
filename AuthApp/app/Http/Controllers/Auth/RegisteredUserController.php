@@ -11,7 +11,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Validator;
 use App\Http\Requests\RegisterRequest;
+
 
 class RegisteredUserController extends Controller
 {
@@ -29,7 +31,9 @@ class RegisteredUserController extends Controller
      * @throws \Illuminate\Validation\ValidationException
      */
     public function store(RegisterRequest $request): RedirectResponse
-    {
+    {   
+
+        $user = $this->validator($request->all());
         $user = $this->sanitizedInput($request->all());
 
         if ($user) {
@@ -54,16 +58,31 @@ class RegisteredUserController extends Controller
         $data['email'] = filter_var($data['email'], FILTER_SANITIZE_EMAIL);
 
         if (!empty($data['name']) && !empty($data['email'])) {
-            return User::create([
-                'name' => $data['name'],
-                'email' => $data['email'],
-                'password' => Hash::make($data['password']),
-            ]);
+            return $this->register($data); // Call the register method with sanitized data
         }
 
         return null;
     }
+    protected function validator(array $data)
+    {
+        return Validator::make($data, [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+    }
+    /**
+     * Create a new user.
+     *
+     * @param array $data
+     * @return User|null
+     */
+    protected function register(array $data): ?User
+    {
+        return User::create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => Hash::make($data['password']),
+        ]);
+    }
 }
-
-
-
